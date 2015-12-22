@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+
+<head>
+<meta charset="utf-8">
+<style type="text/css">
+
+.dots path {
+  fill: none;
+  stroke-width: 3.5px;
+}
+
+.dots stroke {
+  fill: none;
+  stroke-width: 3.5px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis--y line {
+  stroke-opacity: 0.2;
+}
+
+.axis--y path {
+  stroke: none;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+div.tooltip {
+  position: absolute;
+  text-align: center;
+  width: 150px;
+  padding: 2px;
+  font: 14px sans-serif;
+  border: 54px;
+  border-radius: 20px;
+  pointer-events: none;
+     color: white;
+    text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;  
+}
+
+#emotion_boxes {
+  text-shadow: 0px 1px 0px #333333;
+}
+
+</style>
+</head>
+
+<body>
+  
+  <div class='box' id='boxes'>
+    <textarea rows='2' cols='55' id='book_id' placeholder=
+      'full lotr screenplay (get one off google/imdb)'></textarea>
+    <br>
+    
+    <label class="lab">Resolution</label>
+    <input type=range min=1 max=1000 value=100 id=Granularity 
+           oninput="GranularityUpdate()">
+    <output for=Granularity id=grnout>100</output>
+    
+    &nbsp&nbsp&nbsp&nbsp&nbsp
+    
+    <font color="black">Separate</font>
+    <input id="sep_box" type="checkbox" checked onclick="Check();">&nbsp&nbsp
+    
+    <font color="black">Dots</font>
+    <input id="dot_box" type="checkbox" checked onclick="Check();">&nbsp&nbsp
+    
+    <font color="black">Large</font>
+    <input id="large_box" type="checkbox" checked onclick="Check();">&nbsp&nbsp
+    
+    <br>
+    
+    <div class="box" id="emotion_boxes">
+    <input id="all_box" type="button" value="All">
+    &nbsp&nbsp<font color="firebrick">Anger</font>
+    <input id="anger_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="orange">Anticpation</font>
+    <input id="anticipation_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="#BCEE1E">Disgust</font>
+    <input id="disgust_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="black">Fear</font>
+    <input id="fear_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="DodgerBlue ">Joy</font>
+    <input id="joy_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="#FF0000">Negative</font>
+    <input id="negative_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="green">Positive</font>
+    <input id="positive_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="navy">Sadness</font>
+    <input id="sadness_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="#EEEE00">Surprise</font>
+    <input id="surprise_box" type="checkbox" checked onclick="Check();">
+    &nbsp&nbsp<font color="mediumvioletred">Trust</font>
+    <input id="trust_box" type="checkbox" checked onclick="Check();">
+    </div>
+    
+    <input type='button' value='do the thing' onclick='InferNarrative()'>
+
+  </div>
+	
+<script src="https://code.jquery.com/jquery-latest.min.js"
+        type="text/javascript"></script>
+<script src = "//d3js.org/d3.v3.min.js"></script>
+
+<script>
+
+var gran = 30;
+var separate = true, dots_on = true, large_on = true;
+var anger_on = true, anticipation_on = true, disgust_on = true, fear_on = true,
+    joy_on = true, negative_on = true, positive_on = true, sadness_on = true,
+    surprise_on = true, trust_on = true;
+
+var emotions = ["anger", "anticipation", "disgust", "fear", "joy",
+                "negative", "positive", "sadness", "surprise", "trust"];
+                
+var emotion_colors = ["firebrick", "orange", "#BCEE1E",
+                      "black", "DodgerBlue", "#FF0000", "green", 
+                      "navy", "#EEEE00", "mediumvioletred"];
+                
+var n_emotions = ["anger", "disgust", "fear", "negative", "sadness"];
+
+var p_emotions = ["anticipation", "joy", "positive", "trust"];
+
+function GranularityUpdate() {
+  gran = parseInt(document.querySelector('#Granularity').value);
+  document.querySelector('#grnout').value = gran;
+}
+
+$('#all_box').click(function(){
+  Check();
+  if (anger_on && anticipation_on && disgust_on && fear_on && joy_on && 
+      negative_on && positive_on && sadness_on && surprise_on && trust_on) {
+    $(':checkbox').prop("checked", false);    
+  } else {
+    $(':checkbox').prop("checked", true);    
+  }
+  Check();
+});
+
+function Check() {
+  anger_on = document.getElementById("anger_box").checked;
+  anticipation_on = document.getElementById("anticipation_box").checked;
+  disgust_on = document.getElementById("disgust_box").checked;
+  fear_on = document.getElementById("fear_box").checked;
+  joy_on = document.getElementById("joy_box").checked;
+  negative_on = document.getElementById("negative_box").checked;
+  positive_on = document.getElementById("positive_box").checked;
+  sadness_on = document.getElementById("sadness_box").checked;
+  surprise_on = document.getElementById("surprise_box").checked;
+  trust_on = document.getElementById("trust_box").checked;
+  separate = document.getElementById("sep_box").checked;
+  dots_on = document.getElementById("dot_box").checked;
+  large_on = document.getElementById("large_box").checked;
+}
+
+function FileHelper() {} {
+  FileHelper.readStringFromFileAtPath = function(pathOfFileToReadFrom) {
+    var request = new XMLHttpRequest();
+    request.open("GET", pathOfFileToReadFrom, false);
+    request.send(null);
+    var returnValue = request.responseText;
+    return returnValue;
+  };
+}
+
+function Contains(a, obj) {
+  if (a == undefined || a.length == 0) return false;
+  var i = a.length;
+  while (i--) {
+   if (a[i] === obj) {
+      return true;
+    }
+  }
+  return false;
+}
+
+var dict = {};
+var all_words = [];
+
+// words.txt
+var text = FileHelper.readStringFromFileAtPath("words.txt");
+var lines = text.split("\n");
+for (var i = 0; i != lines.length; i += 10) {
+  var line = lines[i].split("\t");
+  dict[line[0]] = [];
+  for (var j = i; j != i + 10; j++) {
+    var line = lines[j].split("\t");
+    if (line[2] == "1") {
+      dict[line[0]].push(line[1]);
+    }
+  }
+}
+
+
+// positive.txt
+text = FileHelper.readStringFromFileAtPath("positive.txt");
+lines = text.split("\n");
+for (var i = 0; i != lines.length; i++) {
+  if (dict[lines[i]] == undefined || dict[lines[i]].length == 0)
+    dict[lines[i]] = [];
+  dict[lines[i]].push("positive");
+}
+
+// negative.txt
+text = FileHelper.readStringFromFileAtPath("negative.txt");
+lines = text.split("\n");
+for (var i = 0; i != lines.length; i++) {
+  if (dict[lines[i]] == undefined || dict[lines[i]].length == 0)
+    dict[lines[i]] = [];
+  dict[lines[i]].push("negative");
+}
+
+// pos_neg.txt
+text = FileHelper.readStringFromFileAtPath("pos_neg.txt");
+lines = text.split("\n");
+for (var i = 0; i != lines.length; i++) {
+  var line = lines[i].split(" ");
+  if (dict[line[0]] == undefined || dict[line[0]].length == 0)
+    dict[line[0]] = [];
+  if (line[0] != "constructor") {
+    dict[String(line[0])].push(line[1]);
+  }
+}
+
+function InferNarrative() {
+  var data = [];
+  var markers = [];
+  var book = document.getElementById('book_id').value;
+  document.getElementById('book_id').value = "";
+  var words = book.split(" ");
+  var word_info = [];
+  
+  function InferWord(word, i) {
+    if (dict[word] != undefined) {
+      all_words.push({idx: i, word: word, emotions: dict[word]});
+      
+      var t = "";
+      for (var j = i; j != i+50 && i < words.length; j++)
+        t += words[j] + " ";
+      
+      var f = [];
+      for (var j = 0; j != emotions.length; j++)
+        if (Contains(dict[word], emotions[j])) f.push(emotions[j]);
+        
+      word_info.push({idx: i, text: t, feelings: f});
+    } else {
+      if (word.length > 10 && word.charAt(0) == '<' && 
+          word.charAt(1) == 'q' && word.charAt(2) == 'z') {
+        var end = word.indexOf("<", 4);
+        markers.push({idx: i, name: word.substring(5, end)});
+      }
+    }
+  }
+  
+  for (var i = 0; i != words.length; i++) {
+    InferWord(words[i], i);
+    if (i != words.length-1) {
+      var double_word = words[i] + "_" + words[i+1];
+      InferWord(double_word, i);
+    }
+  }
+  
+  for (var i = 0; i < word_info.length; i += gran) {
+    var avg_idx = 0;
+    var count = 0;
+    var te = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    for (var j = i; j != i+gran && j < word_info.length; j++) {
+      avg_idx += word_info[j].idx;
+      for (var k = 0; k != word_info[j].feelings.length; k++) {
+        switch (word_info[j].feelings[k]) {
+          case "anger": te[0] = te[0] + 1; break;
+          case "anticipation": te[1] = te[1] + 1; break;
+          case "disgust": te[2] = te[2] + 1; break;
+          case "fear": te[3] = te[3] + 1; break;
+          case "joy": te[4] = te[4] + 1; break;
+          case "negative": te[5] = te[5] + 1; break;
+          case "positive": te[6] = te[6] + 1; break;
+          case "sadness": te[7] = te[7] + 1; break;
+          case "surprise": te[8] = te[8] + 1; break;
+          case "trust": te[9] = te[9] + 1; break;
+        }
+      }
+      count++;
+    }
+    for (var j = 0; j != te.length; j++) {
+      te[j] = te[j]/count;
+    }
+    data.push({idx: avg_idx/count, text: word_info[i].text, total_emotion: te});
+  }
+  
+  if (separate) {
+    for (var i = 0; i != 10; i++)
+      MakeTrend(markers, data, i);
+  } else {
+    MakeOverlaidTrend(markers, data, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  }
+}
+
+function GoAhead(emo) {
+  switch (emo) {
+    case 0: return anger_on;
+    case 1: return anticipation_on;
+    case 2: return disgust_on;
+    case 3: return fear_on;
+    case 4: return joy_on;
+    case 5: return negative_on;
+    case 6: return positive_on;
+    case 7: return sadness_on;
+    case 8: return surprise_on;
+    case 9: return trust_on;
+  }
+  return true;
+}
+
+function MakeOverlaidTrend(markers, data_list, emo_list) {
+  var size_mul = large_on ? .91 : .31;
+  var margin = {top: 30, right: 30, bottom: 30, left: 30},
+    width = (window.innerWidth*size_mul) - margin.left - margin.right,
+    height = (large_on ? 500 : 300) - margin.top - margin.bottom;
+
+  var x = d3.scale.linear()
+      .range([0, width]);
+  
+  var y = d3.scale.linear()
+      .range([height, 0]);
+  
+  var div = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+  
+  var svg = d3.select("body").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  var ymax = -999999999;
+  for (var i = 0; i != data_list.length; i++) {
+    for (var j = 0; j != data_list[i].total_emotion.length; j++) {
+      if (data_list[i].total_emotion[j] > ymax) {
+        ymax = data_list[i].total_emotion[j];
+      }
+    }
+  }
+  var ymin = 999999999;
+  for (var i = 0; i != data_list.length; i++) {
+    for (var j = 0; j != data_list[i].total_emotion.length; j++) {
+      if (data_list[i].total_emotion[j] < ymin) {
+        ymin = data_list[i].total_emotion[j];
+      }
+    }
+  }
+  
+  var xmax = -999999999;
+  for (var i = 0; i != data_list.length; i++) {
+    for (var j = 0; j != data_list[i].total_emotion.length; j++) {
+      if (data_list[i].idx > xmax) {
+        xmax = data_list[i].idx;
+      }
+    }
+  }
+  
+  x.domain([0, xmax]);
+  y.domain([ymin - (ymax/10), ymax + (ymax/10)]);
+
+  svg.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.svg.axis()
+          .scale(x)
+          .orient("bottom"));
+          
+  svg.append("g")
+      .attr("class", "axis axis--y")
+      .call(d3.svg.axis()
+          .scale(y)
+          .tickSize(-width)
+          .orient("left"))
+    .select(".tick:last-of-type");
+
+  var marker_points = svg.selectAll("circle")
+    .data(markers)
+    .enter().append("line")
+    .attr("x1", 0)
+    .attr("y1", 0)
+    .attr("x2", 0)
+    .attr("y2", height*.8)
+    .attr("stroke-width", 1)
+    .attr("stroke", "grey")
+    .attr("transform", function(m) {
+      return "translate(" + x(m.idx) + "," + y(ymax) + ")";
+    });
+  
+  for (var i = 0; i != markers.length; i++) {
+    svg.append("text")
+      .attr("x", 0)
+      .attr("y", 0)
+      .style("text-anchor", "middle")
+      .text(markers[i].name)
+      .attr("transform", function(m) {
+        return "translate(" + x(markers[i].idx) + "," + y(ymax) + ")";
+      });;
+  }
+
+  svg.append("g")
+      .attr("class", "axis axis--y")
+      .call(d3.svg.axis()
+          .scale(y)
+          .tickSize(-width)
+          .orient("left"))
+    .select(".tick:last-of-type");
+  
+  for (var i = 0; i != emo_list.length; i++)
+    svg = MakeOverlaidTrendStep(svg, div, x, y, data_list, emo_list[i]);
+}
+
+function MakeOverlaidTrendStep(svg, div, x, y, data, emo) {
+  if (!GoAhead(emo)) return svg;
+  
+  if (dots_on) {
+    var data_points = svg.append("g")
+        .attr("class", "circle")
+      .selectAll("path")
+        .data(data)
+      .enter().append("path")
+      .style("stroke", emotion_colors[emo])
+      .style("fill", "white")
+        .attr("transform", function(d) {
+          return "translate(" + x(d.idx) + "," + y(d.total_emotion[emo]) + ")";
+        })
+        .attr("d", d3.svg.symbol()
+            .size(60));
+  
+    data_points
+      .data(data)
+      .on("mouseover", function(d) {
+          div.transition()
+              .duration(4)
+              .style("opacity", .9);
+          div	.html(d.text)
+              .style("left", (d3.event.pageX+10) + "px")
+              .style("top", (d3.event.pageY) + "px");
+          d3.select(this).attr("r", 10).style("fill", emotion_colors[emo]);
+          d3.select(this).attr("d", d3.svg.symbol()
+            .size(240));
+      })
+      .on("mouseout", function(d) {
+          div.transition()
+              .duration(10)
+              .style("opacity", 0);
+          d3.select(this).attr("r", 10).style("fill", "white");
+          d3.select(this).attr("d", d3.svg.symbol()
+            .size(60));
+      });
+  }
+
+  var line = d3.svg.line()
+    .interpolate("basis")
+    .x(function(d) { return x(d.idx); })
+    .y(function(d) { return y(d.total_emotion[emo]); });
+          
+  svg.append("path")
+      .datum(data)
+      .attr("class", "line")
+      .attr("d", line)
+      .style("stroke", emotion_colors[emo]);
+    
+  return svg;
+}
+
+function MakeTrend(markers, data, emo) {
+  if(!GoAhead(emo)) return;
+  
+  var size_mul = large_on ? .91 : .31;
+  var margin = {top: 30, right: 30, bottom: 30, left: 30},
+    width = (window.innerWidth*size_mul) - margin.left - margin.right,
+    height = (large_on ? 500 : 300) - margin.top - margin.bottom;
+
+  var x = d3.scale.linear()
+      .range([0, width]);
+  
+  var y = d3.scale.linear()
+      .range([height, 0]);
+  
+  var div = d3.select("body").append("div")   
+    .attr("class", "tooltip")               
+    .style("opacity", 0);
+  
+  var svg = d3.select("body").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  var ymax = d3.max(data, function(d) { return d.total_emotion[emo]; });
+  var ymin = d3.min(data, function(d) { return d.total_emotion[emo]; });
+
+  x.domain([0, d3.max(data, function(p) { return p.idx; })]);
+  y.domain([ymin - (ymax/10), ymax + (ymax/10)]);
+
+  svg.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.svg.axis()
+          .scale(x)
+          .orient("bottom"));
+          
+  svg.append("text")
+    .attr("x", width / 2 )
+    .attr("y", 0)
+    .style("text-anchor", "middle")
+    .text(emotions[emo]);
+
+  var marker_points = svg.selectAll("circle")
+    .data(markers)
+    .enter().append("line")
+    .attr("x1", 0)
+    .attr("y1", 0)
+    .attr("x2", 0)
+    .attr("y2", height*.8)
+    .attr("stroke-width", 1)
+    .attr("stroke", "grey")
+    .attr("transform", function(m) {
+      return "translate(" + x(m.idx) + "," + y(ymax) + ")";
+    });
+  
+  for (var i = 0; i != markers.length; i++) {
+    svg.append("text")
+      .attr("x", 0)
+      .attr("y", 0)
+      .style("text-anchor", "middle")
+      .text(markers[i].name)
+      .attr("transform", function(m) {
+        return "translate(" + x(markers[i].idx) + "," + y(ymax) + ")";
+      });;
+  }
+  
+  if (dots_on) {        
+    var data_points = svg.append("g")
+        .attr("class", "circle")
+      .selectAll("path")
+        .data(data)
+      .enter().append("path")
+      .style("stroke", emotion_colors[emo])
+      .style("fill", "white")
+        .attr("transform", function(d) {
+          return "translate(" + x(d.idx) + "," + y(d.total_emotion[emo]) + ")";
+        })
+        .attr("d", d3.svg.symbol()
+            .size(60));
+  
+    data_points
+      .data(data)
+      .on("mouseover", function(d) {
+          div.transition()
+              .duration(4)
+              .style("opacity", .9);
+          div	.html(d.text)
+              .style("left", (d3.event.pageX+10) + "px")
+              .style("top", (d3.event.pageY) + "px");
+          d3.select(this).attr("r", 10).style("fill", emotion_colors[emo]);
+          d3.select(this).attr("d", d3.svg.symbol()
+            .size(240));
+      })
+      .on("mouseout", function(d) {
+          div.transition()
+              .duration(10)
+              .style("opacity", 0);
+          d3.select(this).attr("r", 10).style("fill", "white");
+          d3.select(this).attr("d", d3.svg.symbol()
+            .size(60));
+      });
+  }
+
+  var line = d3.svg.line()
+    .interpolate("basis")
+    .x(function(d) { return x(d.idx); })
+    .y(function(d) { return y(d.total_emotion[emo]); });
+          
+  svg.append("path")
+      .datum(data)
+      .attr("class", "line")
+      .attr("d", line)
+      .style("stroke", emotion_colors[emo]);
+
+  svg.append("g")
+      .attr("class", "axis axis--y")
+      .call(d3.svg.axis()
+          .scale(y)
+          .tickSize(-width)
+          .orient("left"))
+    .select(".tick:last-of-type");
+}
+
+</script>
+
+</body>
+
+</html>
