@@ -1,4 +1,13 @@
-# a thing
+# whats this
+
+Go to http://owenmcnaughton.github.io/QzQ-Emotional-Timeline and paste a
+screenplay or a book (or a bunch of screenplays from like a franchise or
+something) and then press some buttons. You'll get trend graphs that hopefully
+provide an insight into whats goes on in that film.
+
+If you need to put in markers so that you can correlate events in the film with
+conspicuous bumps in the graph, stick in a " \<qzq>empire_strikes_back\</qzq> "
+yolk. Those spaces before and after the tags are integral.
 
 
 ## sources
