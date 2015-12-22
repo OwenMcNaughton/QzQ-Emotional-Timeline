@@ -212,7 +212,7 @@ for (var i = 0; i != lines.length; i += 10) {
   }
 }
 
-
+/*
 // positive.txt
 text = FileHelper.readStringFromFileAtPath("positive.txt");
 lines = text.split("\n");
@@ -242,6 +242,7 @@ for (var i = 0; i != lines.length; i++) {
     dict[String(line[0])].push(line[1]);
   }
 }
+*/
 
 function InferNarrative() {
   var data = [];
@@ -275,10 +276,13 @@ function InferNarrative() {
   
   for (var i = 0; i != words.length; i++) {
     InferWord(words[i], i);
+    
+    /*
     if (i != words.length-1) {
       var double_word = words[i] + "_" + words[i+1];
       InferWord(double_word, i);
     }
+    */
   }
   
   for (var i = 0; i < word_info.length; i += gran) {
